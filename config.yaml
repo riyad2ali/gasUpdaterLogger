@@ -36,7 +36,9 @@ schedule:
 
 output:
   # Path is resolved relative to the project root (gasUpdaterLogger/).
-  data_file: "gas_prices.txt"
+  # The `data/` subfolder is mounted as a Docker volume; the writer creates
+  # it automatically when running natively.
+  data_file: "data/gas_prices.txt"
   # If true, each line also includes the full raw JSON payload (useful for
   # debugging / in case the parser misses a field).
   include_raw_json: false

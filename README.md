@@ -3,7 +3,82 @@
 A Python service that polls the Costco gas price API on an interval and
 appends the prices to a text file. Runs until you stop it.
 
-## Run
+Output goes to `data/gas_prices.txt`, one line per hour:
+
+```
+[2026-04-24T18:00:05+00:00] premium=3.789, regular=3.099
+```
+
+Operational messages (fetching, errors, sleep intervals) go to the console
+(or to `docker logs` when containerized).
+
+---
+
+## Run with Docker (recommended for the VM)
+
+### With docker compose
+
+From the project root:
+
+```bash
+docker compose up -d --build
+```
+
+That builds the image, starts the container in the background, and
+auto-restarts it unless you explicitly stop it.
+
+**View logs:**
+```bash
+docker compose logs -f
+```
+
+**View the price data file** (on the host):
+```bash
+cat data/gas_prices.txt
+```
+
+**Stop the service:**
+```bash
+docker compose down
+```
+
+**Apply config changes:**
+Edit [config.yaml](config.yaml), then:
+```bash
+docker compose restart
+```
+
+**Rebuild after code changes:**
+```bash
+docker compose up -d --build
+```
+
+### With plain docker (no compose)
+
+```bash
+docker build -t gas-updater-logger .
+
+docker run -d \
+  --name gas-updater-logger \
+  --restart unless-stopped \
+  -v "$(pwd)/config.yaml:/app/config.yaml:ro" \
+  -v "$(pwd)/data:/app/data" \
+  gas-updater-logger
+```
+
+Then `docker logs -f gas-updater-logger` to follow output, and
+`docker stop gas-updater-logger && docker rm gas-updater-logger` to stop.
+
+### What the volumes do
+
+- `./config.yaml:/app/config.yaml:ro` — you edit config on the host; the
+  container reads it at startup. Restart the container to apply changes.
+- `./data:/app/data` — where price records are written. Survives rebuilds
+  and container removal.
+
+---
+
+## Run natively (without Docker)
 
 1. Install dependencies (one-time):
    ```bash
@@ -15,31 +90,12 @@ appends the prices to a text file. Runs until you stop it.
    python src/main.py
    ```
 
-3. Stop it with **Ctrl+C** (or `kill <pid>` — SIGTERM is handled). Shutdown
-   finishes within ~1 second.
+3. Stop it with **Ctrl+C** (or `kill <pid>` — SIGTERM is handled).
 
-Output is appended to `gas_prices.txt` in the project root, one line per
-hour:
+For unattended operation without Docker, run under tmux/screen, `nohup`,
+systemd, or Task Scheduler.
 
-```
-[2026-04-24T18:00:05+00:00] premium=3.789, regular=3.099
-```
-
-Operational messages (fetching, errors, sleep intervals) go to the console.
-
-## Run unattended on a VM
-
-Pick whichever fits your VM — the service doesn't assume any specific
-supervisor:
-
-- **tmux / screen**: `tmux new -s gas` then `python src/main.py`, detach
-  with `Ctrl+b d`. Reattach with `tmux attach -t gas`.
-- **nohup** (Linux): `nohup python src/main.py > service.log 2>&1 &`
-- **systemd** (Linux): create a unit file that runs
-  `ExecStart=/usr/bin/python /path/to/gasUpdaterLogger/src/main.py` with
-  `Restart=always`.
-- **Task Scheduler** (Windows): create a task that runs
-  `python.exe D:\...\gasUpdaterLogger\src\main.py` at startup.
+---
 
 ## Configure
 

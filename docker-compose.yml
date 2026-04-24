@@ -1,0 +1,11 @@
+services:
+  gas-logger:
+    build: .
+    image: gas-updater-logger:latest
+    container_name: gas-updater-logger
+    restart: unless-stopped
+    volumes:
+      # Edit config.yaml on the host; changes apply on container restart.
+      - ./config.yaml:/app/config.yaml:ro
+      # Price records are written here and persist across rebuilds.
+      - ./data:/app/data

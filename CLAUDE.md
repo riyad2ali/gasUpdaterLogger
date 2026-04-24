@@ -10,7 +10,11 @@ on a VM and left running until manually stopped.
 gasUpdaterLogger/
 ├── config.yaml           # all runtime settings (API URL, interval, paths, log level)
 ├── requirements.txt      # requests, PyYAML
-├── gas_prices.txt        # output data file (created on first run)
+├── Dockerfile            # python:3.12-slim image, non-root user
+├── docker-compose.yml    # build + run with host-mounted config.yaml and data/
+├── .dockerignore
+├── data/
+│   └── gas_prices.txt    # output data file (created on first run)
 └── src/
     ├── main.py           # pipeline orchestrator + forever loop + signal handling
     ├── config_loader.py  # loads config.yaml
