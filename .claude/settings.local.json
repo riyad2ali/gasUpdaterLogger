@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile src/main.py src/config_loader.py src/fetcher.py src/price_parser.py src/writer.py src/logger_setup.py)"
+    ]
+  }
+}

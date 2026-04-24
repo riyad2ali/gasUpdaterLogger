@@ -1,0 +1,47 @@
+# Gas price logger configuration.
+# All fields below are read at startup by src/config_loader.py.
+# Edit and restart the service to apply changes.
+
+# Optional: fetch the warehouse id from a separate API before each gas
+# price call. Set `enabled: true` once your ID endpoint is ready — until
+# then the static `api.params.warehouseid` below is used.
+warehouse_api:
+  enabled: false
+  url: "https://example.com/your-warehouse-id-endpoint"
+  params: {}
+  headers: {}
+  timeout_seconds: 30
+  # Dotted path into the JSON response where the warehouse id lives.
+  # Examples:
+  #   response {"warehouseId": 1266}               -> id_path: "warehouseId"
+  #   response {"data": {"warehouse": {"id": 1}}}  -> id_path: "data.warehouse.id"
+  #   response {"warehouses": [{"id": 1266}]}      -> id_path: "warehouses.0.id"
+  id_path: "warehouseId"
+
+api:
+  url: "https://www.costco.com/AjaxGetGasPricesService"
+  params:
+    # Used as the warehouse id when `warehouse_api.enabled` is false.
+    # When `warehouse_api.enabled` is true, this is overwritten at runtime
+    # with the value fetched from `warehouse_api`.
+    warehouseid: 1266
+  timeout_seconds: 30
+  headers:
+    User-Agent: "Mozilla/5.0 (compatible; GasPriceLogger/1.0)"
+    Accept: "application/json, text/plain, */*"
+
+schedule:
+  # How long to wait between fetches, in seconds. 3600 = 1 hour.
+  interval_seconds: 3600
+
+output:
+  # Path is resolved relative to the project root (gasUpdaterLogger/).
+  data_file: "gas_prices.txt"
+  # If true, each line also includes the full raw JSON payload (useful for
+  # debugging / in case the parser misses a field).
+  include_raw_json: false
+
+logging:
+  # One of: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+  format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
