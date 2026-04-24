@@ -2,9 +2,29 @@
 # All fields below are read at startup by src/config_loader.py.
 # Edit and restart the service to apply changes.
 
-# Optional: fetch the warehouse id from a separate API before each gas
-# price call. Set `enabled: true` once your ID endpoint is ready — until
-# then the static `api.params.warehouseid` below is used.
+# Warehouses to poll every interval. Add or remove entries freely.
+warehouses:
+  - name: "Plano"
+    id: 1266
+  - name: "California"
+    id: 657
+  - name: "Texas"
+    id: 683
+  - name: "Arvada, Colorado"
+    id: 676
+  - name: "Phoenix"
+    id: 465
+
+api:
+  url: "https://www.costco.com/AjaxGetGasPricesService"
+  timeout_seconds: 30
+  headers:
+    User-Agent: "Mozilla/5.0 (compatible; GasPriceLogger/1.0)"
+    Accept: "application/json, text/plain, */*"
+
+# Optional: fetch a warehouse id from your own API instead of the static list.
+# Set `enabled: true` once your endpoint is ready. Only applies to
+# single-warehouse mode (i.e. when `warehouses` list is empty).
 warehouse_api:
   enabled: false
   url: "https://example.com/your-warehouse-id-endpoint"
@@ -18,21 +38,9 @@ warehouse_api:
   #   response {"warehouses": [{"id": 1266}]}      -> id_path: "warehouses.0.id"
   id_path: "warehouseId"
 
-api:
-  url: "https://www.costco.com/AjaxGetGasPricesService"
-  params:
-    # Used as the warehouse id when `warehouse_api.enabled` is false.
-    # When `warehouse_api.enabled` is true, this is overwritten at runtime
-    # with the value fetched from `warehouse_api`.
-    warehouseid: 1266
-  timeout_seconds: 30
-  headers:
-    User-Agent: "Mozilla/5.0 (compatible; GasPriceLogger/1.0)"
-    Accept: "application/json, text/plain, */*"
-
 schedule:
   # How long to wait between fetches, in seconds. 3600 = 1 hour.
-  interval_seconds: 3600
+  interval_seconds: 1800
 
 output:
   # Path is resolved relative to the project root (gasUpdaterLogger/).

@@ -1,7 +1,7 @@
 """Gas price logger pipeline.
 
-Loop forever: fetch -> parse -> write, sleeping `interval_seconds` between
-iterations. Runs until killed (Ctrl+C or SIGTERM).
+Loop forever: for each warehouse fetch -> parse -> write, sleeping
+`interval_seconds` between full cycles. Runs until killed (Ctrl+C or SIGTERM).
 """
 import logging
 import signal
@@ -19,7 +19,7 @@ from fetcher import fetch
 from logger_setup import setup_logger
 from price_parser import parse_prices
 from warehouse_id import fetch_warehouse_id
-from writer import write_record
+from writer import write_record, write_separator
 
 log = logging.getLogger("gas_logger")
 
@@ -34,32 +34,58 @@ def _handle_signal(signum, _frame):
 
 def run_once(cfg: dict) -> None:
     api = cfg["api"]
-    params = dict(api.get("params", {}))
-
-    wh_cfg = cfg.get("warehouse_api") or {}
-    if wh_cfg.get("enabled"):
-        warehouse_id = fetch_warehouse_id(
-            url=wh_cfg["url"],
-            params=wh_cfg.get("params", {}),
-            headers=wh_cfg.get("headers", {}),
-            timeout=wh_cfg.get("timeout_seconds", 30),
-            id_path=wh_cfg["id_path"],
-        )
-        params["warehouseid"] = warehouse_id
-
-    raw = fetch(
-        url=api["url"],
-        params=params,
-        timeout=api.get("timeout_seconds", 30),
-        headers=api.get("headers", {}),
-    )
-    prices = parse_prices(raw)
+    warehouses = cfg.get("warehouses") or []
     output = cfg["output"]
-    write_record(
-        path=ROOT / output["data_file"],
-        prices=prices,
-        raw=raw if output.get("include_raw_json") else None,
-    )
+    data_path = ROOT / output["data_file"]
+
+    if warehouses:
+        for warehouse in warehouses:
+            wh_name = warehouse["name"]
+            wh_id = str(warehouse["id"])
+            try:
+                raw = fetch(
+                    url=api["url"],
+                    params={"warehouseid": wh_id},
+                    timeout=api.get("timeout_seconds", 30),
+                    headers=api.get("headers", {}),
+                )
+                prices = parse_prices(raw)
+                write_record(
+                    path=data_path,
+                    name=wh_name,
+                    prices=prices,
+                    raw=raw if output.get("include_raw_json") else None,
+                )
+            except Exception:
+                log.exception("Failed for warehouse %s (id=%s)", wh_name, wh_id)
+        write_separator(data_path)
+    else:
+        # Single-warehouse fallback — uses api.params.warehouseid or warehouse_api.
+        params = dict(api.get("params", {}))
+        wh_cfg = cfg.get("warehouse_api") or {}
+        if wh_cfg.get("enabled"):
+            warehouse_id = fetch_warehouse_id(
+                url=wh_cfg["url"],
+                params=wh_cfg.get("params", {}),
+                headers=wh_cfg.get("headers", {}),
+                timeout=wh_cfg.get("timeout_seconds", 30),
+                id_path=wh_cfg["id_path"],
+            )
+            params["warehouseid"] = warehouse_id
+        raw = fetch(
+            url=api["url"],
+            params=params,
+            timeout=api.get("timeout_seconds", 30),
+            headers=api.get("headers", {}),
+        )
+        prices = parse_prices(raw)
+        write_record(
+            path=data_path,
+            name=params.get("warehouseid", "unknown"),
+            prices=prices,
+            raw=raw if output.get("include_raw_json") else None,
+        )
+        write_separator(data_path)
 
 
 def _sleep_responsive(seconds: float) -> None:
