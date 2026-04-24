@@ -12,10 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY config.yaml ./
 
-RUN useradd --create-home --uid 1000 gaslogger \
-    && mkdir -p /app/data \
-    && chown -R gaslogger:gaslogger /app
-
-USER gaslogger
+RUN mkdir -p /app/data
 
 CMD ["python", "src/main.py"]
